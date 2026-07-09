@@ -3,14 +3,12 @@
   const { MARKETS, buildWorkbook, range } = SurveyCore;
 
   const grid = document.getElementById("marketGrid");
-  const search = document.getElementById("marketSearch");
   const countEl = document.getElementById("marketCount");
   const statusEl = document.getElementById("status");
   const errorEl = document.getElementById("error");
   const btn = document.getElementById("generateBtn");
-  const historicalHint = document.getElementById("historicalHint");
 
-  let historicalDb = null; // { markets: { [name]: { values: { code: { year: n } } } } }
+  let historicalDb = null;
 
   MARKETS.forEach(([market]) => {
     const label = document.createElement("label");
@@ -26,24 +24,19 @@
 
   function boxes() { return [...grid.querySelectorAll("input[type=checkbox]")]; }
   function updateCount() {
-    countEl.textContent = `${boxes().filter((b) => b.checked).length} of ${MARKETS.length} selected`;
+    countEl.textContent = `${boxes().filter((b) => b.checked).length} of ${MARKETS.length}`;
   }
   updateCount();
 
   document.getElementById("selectAll").addEventListener("click", () => {
-    boxes().forEach((b) => { if (!b.parentElement.hidden) b.checked = true; });
+    boxes().forEach((b) => { b.checked = true; });
     updateCount();
   });
   document.getElementById("selectNone").addEventListener("click", () => {
     boxes().forEach((b) => { b.checked = false; });
     updateCount();
   });
-  search.addEventListener("input", () => {
-    const q = search.value.trim().toLowerCase();
-    boxes().forEach((b) => { b.parentElement.hidden = q && !b.value.toLowerCase().includes(q); });
-  });
 
-  // sensible defaults per survey type
   document.querySelectorAll("input[name=stype]").forEach((r) => {
     r.addEventListener("change", () => {
       if (r.value === "supplemental" && r.checked) {
@@ -62,36 +55,15 @@
 
   function intVal(id) { return parseInt(document.getElementById(id).value, 10); }
 
-  function updateHistoricalHint() {
-    if (!historicalHint) return;
-    if (!historicalDb) {
-      historicalHint.textContent =
-        "Historical data could not be loaded — blank templates will still work. Refresh the page or check that data/historical-values.json is available.";
-      return;
-    }
-    const n = Object.keys(historicalDb.markets || {}).length;
-    const when = historicalDb.generatedAt
-      ? new Date(historicalDb.generatedAt).toLocaleDateString()
-      : "unknown date";
-    historicalHint.textContent =
-      `Loaded values for ${n} markets (extracted ${when}). ` +
-      "Only locked (non-editable) years are filled; green editable cells stay blank for contacts. " +
-      "Coverage varies by market — some older templates only have totals from 2018 onward.";
-  }
-
   fetch("data/historical-values.json")
     .then((r) => {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     })
-    .then((data) => {
-      historicalDb = data;
-      updateHistoricalHint();
-    })
+    .then((data) => { historicalDb = data; })
     .catch((e) => {
       console.warn("Could not load historical values:", e);
       historicalDb = null;
-      updateHistoricalHint();
     });
 
   btn.addEventListener("click", async () => {
@@ -132,7 +104,7 @@
       for (let i = 0; i < selected.length; i++) {
         const [market, currency] = selected[i];
         statusEl.textContent = `Generating ${market} (${i + 1}/${selected.length})...`;
-        await new Promise((res) => setTimeout(res, 0)); // let the UI repaint
+        await new Promise((res) => setTimeout(res, 0));
         const histEntry = populateHistorical ? historicalDb.markets[market] : null;
         if (populateHistorical && !histEntry) missingHist.push(market);
         const wb = await buildWorkbook(ExcelJS, {
@@ -158,7 +130,7 @@
       }
       let msg = `Done — ${selected.length} file${selected.length > 1 ? "s" : ""} generated.`;
       if (missingHist.length) {
-        msg += ` No historical data found for: ${missingHist.join(", ")} (those files were left blank for locked years).`;
+        msg += ` No historical data for: ${missingHist.join(", ")}.`;
       }
       statusEl.textContent = msg;
     } catch (e) {
