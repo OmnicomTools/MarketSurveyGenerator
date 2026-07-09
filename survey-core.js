@@ -105,6 +105,30 @@
     return `IF(OR(${prev}="",${prev}=0,${cur}=""),"-----",${cur}/${prev}-1)`;
   }
 
+  function growthResult(cur, prev) {
+    if (cur == null || prev == null || prev === 0) return "-----";
+    return cur / prev - 1;
+  }
+
+  /** Resolve a series value for one year from historical inputs + child rollups. */
+  function resolveSeriesValue(code, kind, children, year, historical, valueOf) {
+    if (children && children.length) {
+      let sum = 0;
+      let any = false;
+      for (const ch of children) {
+        const v = valueOf(ch, year);
+        if (v != null) {
+          sum += v;
+          any = true;
+        }
+      }
+      return any ? sum : null;
+    }
+    const isInput = kind === "input" || kind === "block-input";
+    if (isInput) return lookupValue(historical, code, year);
+    return null;
+  }
+
   function buildDefinitionsSheet(wb) {
     const ws = wb.addWorksheet("Definitions");
     let r = 1;
@@ -275,6 +299,34 @@
       r += 2; // data row + growth row
     }
 
+    // Cached numeric values so formulas open with visible results (Excel otherwise
+    // shows blanks until calculation / "Enable Editing" / content is allowed).
+    const cached = {}; // code -> { year -> number|null }
+    function valueOf(code, year) {
+      if (!cached[code]) return null;
+      const v = cached[code][year];
+      return typeof v === "number" && Number.isFinite(v) ? v : null;
+    }
+    // Resolve leaves first, then parents (SERIES is already leaf-before-parent for most,
+    // but DIG/TV/PUB/AUD/OOH/TOTAL reference children defined later — so do two passes).
+    for (const [code, , kind, children] of SERIES) {
+      if (!code || kind === "gap") continue;
+      cached[code] = {};
+      for (const y of years) {
+        if (children) cached[code][y] = null; // filled in second pass
+        else cached[code][y] = populate ? lookupValue(historical, code, y) : null;
+      }
+    }
+    // Multiple passes so parent totals see child values
+    for (let pass = 0; pass < 4; pass++) {
+      for (const [code, , kind, children] of SERIES) {
+        if (!code || kind === "gap" || !children) continue;
+        for (const y of years) {
+          cached[code][y] = resolveSeriesValue(code, kind, children, y, historical, valueOf);
+        }
+      }
+    }
+
     r = hdrRow + 1;
     for (const [code, label, kind, children] of SERIES) {
       if (kind === "gap") { r += 1; continue; }
@@ -289,12 +341,13 @@
         cell.numFmt = "#,##0.0";
         if (children) {
           const refs = children.map((ch) => `${colLetter(col)}${rowOf[ch]}`).join("+");
-          cell.value = { formula: refs };
+          const result = valueOf(code, y);
+          cell.value = result == null ? { formula: refs } : { formula: refs, result };
         } else if (isInput && editable.has(y)) {
           cell.protection = { locked: false };
           cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: INPUT_GREEN } };
         } else if (isInput && populate && !editable.has(y)) {
-          const hist = lookupValue(historical, code, y);
+          const hist = valueOf(code, y);
           if (hist != null) cell.value = hist;
         }
       });
@@ -307,8 +360,13 @@
         const g = ws.getRow(r).getCell(col);
         g.numFmt = "0.0%";
         g.font = { italic: true, size: 9 };
-        if (i === 0) g.value = "-----";
-        else g.value = { formula: growthFormula(colLetter(col), colLetter(col - 1), r) };
+        if (i === 0) {
+          g.value = "-----";
+        } else {
+          const formula = growthFormula(colLetter(col), colLetter(col - 1), r);
+          const result = growthResult(valueOf(code, y), valueOf(code, years[i - 1]));
+          g.value = { formula, result };
+        }
       });
       r += 1;
     }
@@ -328,6 +386,8 @@
   // historicalValues: { [code]: { [year]: number } } — fills locked input cells only
   async function buildWorkbook(ExcelJS, opts) {
     const wb = new ExcelJS.Workbook();
+    // Force Excel to recalculate on open so formulas aren't blank in Protected View.
+    wb.calcProperties = { fullCalcOnLoad: true };
     await buildDefinitionsSheet(wb);
     await buildMarketSheet(
       wb,
