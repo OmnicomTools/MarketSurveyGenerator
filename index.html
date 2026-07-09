@@ -9,161 +9,180 @@
 <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #140c22;
-    --surface: #1c1230;
-    --surface-alt: #23183a;
+    --bg: #120a1f;
+    --surface: #1a122c;
+    --surface-alt: #241833;
     --purple: #6b3d96;
     --purple-mid: #7d4aad;
-    --border: #3a2a55;
-    --text: #f2eef8;
-    --text-muted: #b0a3c4;
+    --border: #3d2d58;
+    --text: #f5f1fa;
+    --text-muted: #b7a9c9;
     --editable: #3d2a58;
     --error: #d94a6a;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
+    min-height: 100vh;
     font-family: "Source Sans 3", "Segoe UI", Arial, sans-serif;
+    font-size: 16px;
     color: var(--text);
     background: var(--bg);
   }
   header {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 20px;
+    gap: 16px;
+    padding: 18px 40px;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
   .logo {
-    height: 36px;
+    height: 44px;
     width: auto;
     display: block;
   }
   header h1 {
     margin: 0;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 600;
+    letter-spacing: -0.01em;
     color: #fff;
   }
   main {
-    max-width: 920px;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+    padding: 32px 40px 40px;
   }
-  .top-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: stretch;
+  .controls {
+    display: grid;
+    grid-template-columns: 1.1fr 1.2fr 1.1fr;
+    gap: 16px;
+    margin-bottom: 16px;
   }
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 12px 14px;
-    width: fit-content;
-    max-width: 100%;
+    border-radius: 8px;
+    padding: 20px 22px;
   }
   .card h2 {
-    margin: 0 0 8px;
-    font-size: 13px;
+    margin: 0 0 14px;
+    font-size: 15px;
     font-weight: 600;
-    color: #d4c4e8;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #cbb8e0;
   }
   .card-markets {
-    width: 100%;
+    margin-bottom: 16px;
   }
   .card-actions {
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: 100%;
+    gap: 16px;
+    padding: 18px 22px;
   }
-  label { font-size: 13px; color: var(--text); }
+  label {
+    font-size: 15px;
+    color: var(--text);
+  }
   .field {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-top: 6px;
+    gap: 10px;
+    margin-top: 12px;
   }
   .field:first-of-type { margin-top: 0; }
+  .field > label {
+    min-width: 78px;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
   input[type=number] {
-    padding: 4px 7px;
+    padding: 8px 10px;
     border: 1px solid var(--border);
-    border-radius: 4px;
-    font-size: 13px;
+    border-radius: 5px;
+    font-size: 15px;
     font-family: inherit;
     background: var(--surface-alt);
     color: var(--text);
     outline: none;
-    width: 68px;
+    width: 84px;
   }
-  input[type=number]:focus { border-color: var(--purple-mid); }
+  input[type=number]:focus {
+    border-color: var(--purple-mid);
+  }
   .radio-group {
     display: flex;
     flex-direction: column;
-    gap: 5px;
-  }
-  .radio-group.inline {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 14px;
+    gap: 10px;
   }
   .radio-group label {
     cursor: pointer;
     color: var(--text-muted);
-    white-space: nowrap;
+    line-height: 1.35;
   }
-  .radio-group label:has(input:checked) { color: var(--text); }
+  .radio-group label:has(input:checked) {
+    color: var(--text);
+    font-weight: 500;
+  }
   .radio-group input[type=radio] {
     accent-color: var(--purple-mid);
-    margin-right: 4px;
+    margin-right: 6px;
+    transform: scale(1.05);
   }
   .editable-note {
     background: var(--editable);
     border: 1px solid var(--border);
-    border-radius: 3px;
-    padding: 1px 6px;
-    color: #e0d4ef;
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: #e4d6f2;
+    font-size: 14px;
   }
   .toolbar {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 14px;
   }
   #marketCount {
-    font-size: 12px;
+    margin-left: 4px;
+    font-size: 14px;
     color: var(--text-muted);
   }
   #marketGrid {
     display: grid;
-    grid-template-columns: repeat(4, max-content);
-    gap: 3px 18px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px 20px;
+    padding: 4px 0 2px;
   }
   #marketGrid label {
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 13px;
+    gap: 8px;
+    font-size: 15px;
     cursor: pointer;
-    white-space: nowrap;
     color: var(--text-muted);
+    padding: 4px 2px;
+    border-radius: 4px;
   }
-  #marketGrid label:hover { color: var(--text); }
-  #marketGrid input[type=checkbox] { accent-color: var(--purple-mid); }
+  #marketGrid label:hover {
+    color: var(--text);
+  }
+  #marketGrid input[type=checkbox] {
+    accent-color: var(--purple-mid);
+    width: 15px;
+    height: 15px;
+  }
   button.small {
-    padding: 4px 10px;
-    font-size: 12px;
+    padding: 7px 14px;
+    font-size: 14px;
     font-family: inherit;
     background: var(--surface-alt);
     color: var(--text);
     border: 1px solid var(--border);
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
   }
   button.small:hover {
@@ -174,9 +193,9 @@
     background: var(--purple);
     color: #fff;
     border: none;
-    border-radius: 4px;
-    padding: 8px 18px;
-    font-size: 14px;
+    border-radius: 5px;
+    padding: 12px 28px;
+    font-size: 16px;
     font-weight: 600;
     font-family: inherit;
     cursor: pointer;
@@ -186,10 +205,16 @@
     background: #4a3560;
     cursor: wait;
   }
-  #status { font-size: 13px; color: var(--text-muted); }
-  #error { color: var(--error); font-size: 13px; }
-  @media (max-width: 720px) {
-    #marketGrid { grid-template-columns: repeat(2, max-content); }
+  #status { font-size: 15px; color: var(--text-muted); }
+  #error { color: var(--error); font-size: 15px; }
+  @media (max-width: 900px) {
+    main { padding: 24px 20px 32px; }
+    header { padding: 16px 20px; }
+    .controls { grid-template-columns: 1fr; }
+    #marketGrid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 640px) {
+    #marketGrid { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -199,7 +224,7 @@
   <h1>Market Survey Generator</h1>
 </header>
 <main>
-  <div class="top-row">
+  <div class="controls">
     <div class="card">
       <h2>Survey type</h2>
       <div class="radio-group">
