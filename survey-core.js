@@ -51,28 +51,14 @@
     ["TOTAL",            "TOTAL MEDIA (SURVEY SCOPE)",        "block", ["TV", "DIG", "PUB", "AUD", "OOH", "CIN"]],
   ];
 
-  // [market, currency]
+  // [market, currency] — the markets that receive a survey (from the survey template folder)
   const MARKETS = [
-    ["Argentina", "ARS"], ["Australia", "AUD"], ["Austria", "EUR"], ["Bahrain", "BHD"],
-    ["Bangladesh", "BDT"], ["Belgium", "EUR"], ["Brazil", "BRL"], ["Bulgaria", "BGN"],
-    ["Canada", "CAD"], ["Chile", "CLP"], ["China", "RMB"], ["Colombia", "COP"],
-    ["Costa Rica", "CRC"], ["Croatia", "HRK"], ["Czech Republic", "CZK"], ["Denmark", "DKK"],
-    ["Ecuador", "USD"], ["Egypt", "USD"], ["Estonia", "EUR"], ["Finland", "EUR"],
-    ["France", "EUR"], ["Germany", "EUR"], ["Greece", "EUR"], ["Gulf countries", "USD"],
-    ["Hong Kong", "HKD"], ["Hungary", "HUF"], ["India", "INR"], ["Indonesia", "IDR"],
-    ["Ireland", "EUR"], ["Italy", "EUR"], ["Japan", "JPY"], ["Kazakhstan", "USD"],
-    ["Kenya", "KES"], ["Kuwait", "KWD"], ["Latvia", "LVL"], ["Lebanon", "USD"],
-    ["Lithuania", "LTL"], ["Macedonia", "MKD"], ["Malaysia", "MYR"], ["Mexico", "MXN"],
-    ["Montenegro", "EUR"], ["Morocco", "MAD"], ["Netherlands", "EUR"], ["New Zealand", "NZD"],
-    ["Nigeria", "NGN"], ["Norway", "NOK"], ["Oman", "OMR"], ["Pakistan", "PKR"],
-    ["Panama", "USD"], ["Peru", "USD"], ["Philippines", "PHP"], ["Poland", "PLN"],
-    ["Portugal", "EUR"], ["Puerto Rico", "USD"], ["Qatar", "QR"], ["Romania", "USD"],
-    ["Russia", "RUB"], ["Saudi Arabia", "SAR"], ["Serbia", "EUR"], ["Singapore", "SGD"],
-    ["Slovakia", "EUR"], ["Slovenia", "EUR"], ["South Africa", "ZAR"], ["South Korea", "KRW"],
-    ["Spain", "EUR"], ["Sri Lanka", "SLR"], ["Sweden", "SEK"], ["Switzerland", "CHF"],
-    ["Taiwan", "TWD"], ["Thailand", "THB"], ["Turkey", "TRY"], ["Ukraine", "USD"],
-    ["United Arab Emirates", "AED"], ["United Kingdom", "GBP"], ["United States", "USD"],
-    ["Uruguay", "UYU"], ["Venezuela", "VEF"], ["Vietnam", "VND"],
+    ["Argentina", "ARS"], ["Australia", "AUD"], ["Austria", "EUR"], ["Belgium", "EUR"],
+    ["Brazil", "BRL"], ["Canada", "CAD"], ["China", "RMB"], ["Egypt", "USD"],
+    ["France", "EUR"], ["GCC", "USD"], ["Germany", "EUR"], ["Indonesia", "IDR"],
+    ["Japan", "JPY"], ["Mexico", "MXN"], ["Netherlands", "EUR"], ["Poland", "PLN"],
+    ["South Korea", "KRW"], ["Spain", "EUR"], ["Sweden", "SEK"], ["Switzerland", "CHF"],
+    ["Taiwan", "TWD"], ["Turkey", "TRY"], ["UK", "GBP"],
   ];
 
   // [name, text] — text "" means section header
