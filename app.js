@@ -8,6 +8,9 @@
   const statusEl = document.getElementById("status");
   const errorEl = document.getElementById("error");
   const btn = document.getElementById("generateBtn");
+  const historicalHint = document.getElementById("historicalHint");
+
+  let historicalDb = null; // { markets: { [name]: { values: { code: { year: n } } } } }
 
   MARKETS.forEach(([market]) => {
     const label = document.createElement("label");
@@ -59,9 +62,43 @@
 
   function intVal(id) { return parseInt(document.getElementById(id).value, 10); }
 
+  function updateHistoricalHint() {
+    if (!historicalHint) return;
+    if (!historicalDb) {
+      historicalHint.textContent =
+        "Historical data could not be loaded — blank templates will still work. Refresh the page or check that data/historical-values.json is available.";
+      return;
+    }
+    const n = Object.keys(historicalDb.markets || {}).length;
+    const when = historicalDb.generatedAt
+      ? new Date(historicalDb.generatedAt).toLocaleDateString()
+      : "unknown date";
+    historicalHint.textContent =
+      `Loaded values for ${n} markets (extracted ${when}). ` +
+      "Only locked (non-editable) years are filled; green editable cells stay blank for contacts. " +
+      "Coverage varies by market — some older templates only have totals from 2018 onward.";
+  }
+
+  fetch("data/historical-values.json")
+    .then((r) => {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    })
+    .then((data) => {
+      historicalDb = data;
+      updateHistoricalHint();
+    })
+    .catch((e) => {
+      console.warn("Could not load historical values:", e);
+      historicalDb = null;
+      updateHistoricalHint();
+    });
+
   btn.addEventListener("click", async () => {
     errorEl.textContent = "";
     const supplemental = document.querySelector("input[name=stype]:checked").value === "supplemental";
+    const populateHistorical =
+      document.querySelector("input[name=populate]:checked").value === "historical";
     const yf = intVal("yearFrom"), yt = intVal("yearTo");
     const ef = intVal("editFrom"), et = intVal("editTo");
     if ([yf, yt, ef, et].some(isNaN) || yf > yt || ef > et) {
@@ -77,6 +114,11 @@
       errorEl.textContent = "Select at least one market.";
       return;
     }
+    if (populateHistorical && !historicalDb) {
+      errorEl.textContent =
+        "Historical data is not available. Choose blank templates, or refresh and try again.";
+      return;
+    }
 
     const years = range(yf, yt);
     const editableYears = range(ef, et);
@@ -86,11 +128,21 @@
     try {
       const zip = new JSZip();
       let single = null;
+      let missingHist = [];
       for (let i = 0; i < selected.length; i++) {
         const [market, currency] = selected[i];
         statusEl.textContent = `Generating ${market} (${i + 1}/${selected.length})...`;
         await new Promise((res) => setTimeout(res, 0)); // let the UI repaint
-        const wb = await buildWorkbook(ExcelJS, { market, currency, years, editableYears, supplemental });
+        const histEntry = populateHistorical ? historicalDb.markets[market] : null;
+        if (populateHistorical && !histEntry) missingHist.push(market);
+        const wb = await buildWorkbook(ExcelJS, {
+          market,
+          currency,
+          years,
+          editableYears,
+          supplemental,
+          historicalValues: histEntry ? histEntry.values : null,
+        });
         const buf = await wb.xlsx.writeBuffer();
         const fname = `${market} ${suffix}.xlsx`;
         if (selected.length === 1) single = { fname, buf };
@@ -104,7 +156,11 @@
         const stamp = new Date().toISOString().slice(0, 10);
         download(`${supplemental ? "Historical Restatements" : "Market Surveys"} ${stamp}.zip`, blob);
       }
-      statusEl.textContent = `Done — ${selected.length} file${selected.length > 1 ? "s" : ""} generated.`;
+      let msg = `Done — ${selected.length} file${selected.length > 1 ? "s" : ""} generated.`;
+      if (missingHist.length) {
+        msg += ` No historical data found for: ${missingHist.join(", ")} (those files were left blank for locked years).`;
+      }
+      statusEl.textContent = msg;
     } catch (e) {
       console.error(e);
       errorEl.textContent = `Something went wrong: ${e.message}`;

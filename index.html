@@ -218,7 +218,16 @@
   </div>
 
   <div class="card">
-    <h2>3 &middot; Markets</h2>
+    <h2>3 &middot; Historical data</h2>
+    <div class="radio-group">
+      <label><input type="radio" name="populate" value="historical" checked> Pre-fill locked years from latest survey templates</label>
+      <label><input type="radio" name="populate" value="blank"> Generate blank templates (no historical values)</label>
+    </div>
+    <div class="hint" id="historicalHint">Loading historical data…</div>
+  </div>
+
+  <div class="card">
+    <h2>4 &middot; Markets</h2>
     <div class="toolbar">
       <button class="small" id="selectAll">Select all</button>
       <button class="small" id="selectNone">Clear</button>

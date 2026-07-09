@@ -122,14 +122,26 @@
     return ws.protect("", {});
   }
 
-  function buildMarketSheet(wb, market, currency, years, editableYears, supplemental) {
+  function lookupValue(historical, code, year) {
+    if (!historical || !code) return null;
+    const series = historical[code];
+    if (!series) return null;
+    const v = series[year] != null ? series[year] : series[String(year)];
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+
+  function buildMarketSheet(wb, market, currency, years, editableYears, supplemental, historical) {
     const ws = wb.addWorksheet(market.slice(0, 31));
     const editable = new Set(editableYears);
+    const populate = !!historical;
 
     const title = supplemental ? `${market} — HISTORICAL RESTATEMENT` : market;
-    const note = supplemental
+    let note = supplemental
       ? "Please restate historical figures only where your source data has changed."
       : "Please complete the green cells. Leave a cell BLANK if the figure is not available — enter 0 only for a true zero.";
+    if (populate) {
+      note += " Locked years are pre-filled from the latest survey templates where available.";
+    }
     const b1 = ws.getRow(1).getCell(2);
     b1.value = title;
     b1.font = { bold: true, size: 14 };
@@ -176,6 +188,9 @@
         } else if (isInput && editable.has(y)) {
           cell.protection = { locked: false };
           cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: INPUT_GREEN } };
+        } else if (isInput && populate && !editable.has(y)) {
+          const hist = lookupValue(historical, code, y);
+          if (hist != null) cell.value = hist;
         }
       });
       r += 1;
@@ -200,11 +215,20 @@
     return ws.protect("", {});
   }
 
-  // options: { market, currency, years: [..], editableYears: [..], supplemental: bool }
+  // options: { market, currency, years, editableYears, supplemental, historicalValues? }
+  // historicalValues: { [code]: { [year]: number } } — fills locked input cells only
   async function buildWorkbook(ExcelJS, opts) {
     const wb = new ExcelJS.Workbook();
     await buildDefinitionsSheet(wb);
-    await buildMarketSheet(wb, opts.market, opts.currency, opts.years, opts.editableYears, opts.supplemental);
+    await buildMarketSheet(
+      wb,
+      opts.market,
+      opts.currency,
+      opts.years,
+      opts.editableYears,
+      opts.supplemental,
+      opts.historicalValues || null
+    );
     return wb;
   }
 
