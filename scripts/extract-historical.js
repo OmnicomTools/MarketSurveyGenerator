@@ -132,6 +132,10 @@ function mapCrossPlatformRows(ws, labelCol) {
         // Old templates often have a single digital audio bucket — map to streaming.
         code = "AUD.STREAM";
       } else if (section === "OOH") code = "OOH.DIG";
+    } else if (/^Free TV/i.test(label) && /Total/i.test(label)) {
+      section = "TV"; subsection = "TV.FREE"; code = "TV.FREE";
+    } else if (/^Pay\/?Mch TV/i.test(label) && /Total/i.test(label)) {
+      section = "TV"; subsection = "TV.PAY"; code = "TV.PAY";
     } else if (/^PUBLISHING TOTAL$/i.test(label)) {
       section = "PUB"; subsection = null; code = "PUB";
     } else if (/^AUDIO MEDIA TOTAL$/i.test(label)) {
@@ -210,35 +214,45 @@ function readMarketTitle(ws, layout, fileBase) {
   return normalizeMarketName(t, fileBase);
 }
 
-async function extractFile(filePath) {
-  const fileBase = path.basename(filePath, path.extname(filePath));
-  if (!/Survey/i.test(fileBase)) return null;
-  if (/5\.14\.26/i.test(fileBase)) return null; // alternate Turkey layout — skip
-
-  const wb = new ExcelJS.Workbook();
-  await wb.xlsx.load(fs.readFileSync(filePath));
-  const ws = pickDataSheet(wb, fileBase);
-  if (!ws) return null;
-
-  const layout = detectLayout(ws);
-  if (!layout) {
-    console.warn("  skip (unknown layout):", path.basename(filePath));
-    return null;
+/** Locate a yellow "REVISIONS" year-grid (parallel to the main publication block). */
+function findRevisionsLayout(ws) {
+  const maxR = Math.min(ws.rowCount || 20, 20);
+  const maxC = Math.min(ws.columnCount || 60, 60);
+  for (let r = 1; r <= maxR; r++) {
+    for (let c = 1; c <= maxC; c++) {
+      const t = cellText(ws.getRow(r).getCell(c).value);
+      if (!t || !/^REVISIONS$/i.test(t)) continue;
+      const years = [];
+      for (let yc = c + 1; yc <= c + 30; yc++) {
+        const y = cellNumber(ws.getRow(r).getCell(yc).value);
+        if (y == null || y < 1900 || y > 2100) break;
+        years.push({ col: yc, year: y });
+      }
+      if (!years.length) continue;
+      return { kind: "revisions", yearRow: r, yearStartCol: years[0].col, labelCol: c, years };
+    }
   }
+  return null;
+}
 
-  const market = readMarketTitle(ws, layout, fileBase);
-  const years = readYears(ws, layout);
-  const mapped = mapCrossPlatformRows(ws, layout.labelCol);
-
-  const values = {}; // code -> { year: number }
+function readBlockValues(ws, labelCol, years) {
+  const mapped = mapCrossPlatformRows(ws, labelCol);
+  const values = {};
+  let cells = 0;
   for (const { row, code } of mapped) {
     if (!values[code]) values[code] = {};
     for (const { col, year } of years) {
       const n = cellNumber(ws.getRow(row).getCell(col).value);
-      if (n != null) values[code][year] = n;
+      if (n != null) {
+        values[code][year] = n;
+        cells++;
+      }
     }
   }
+  return { values, cells, mappedCount: mapped.length };
+}
 
+function promoteParentTotals(values) {
   // Compact templates often only store parent totals. Promote those onto the
   // primary leaf input so the new template's SUM formulas still roll up correctly.
   const PROMOTIONS = [
@@ -258,12 +272,72 @@ async function extractFile(filePath) {
       if (values[leaf][y] == null) values[leaf][y] = v;
     }
   }
+}
+
+/** Overlay revision values on top of base values (revisions win). */
+function mergeValues(base, overlay) {
+  let overwrites = 0;
+  let additions = 0;
+  for (const [code, yearMap] of Object.entries(overlay || {})) {
+    if (!base[code]) base[code] = {};
+    for (const [y, v] of Object.entries(yearMap)) {
+      if (base[code][y] == null) additions++;
+      else if (base[code][y] !== v) overwrites++;
+      base[code][y] = v;
+    }
+  }
+  return { overwrites, additions };
+}
+
+async function extractFile(filePath) {
+  const fileBase = path.basename(filePath, path.extname(filePath));
+  if (!/Survey/i.test(fileBase)) return null;
+  if (/5\.14\.26/i.test(fileBase)) return null; // alternate Turkey layout — skip
+
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(fs.readFileSync(filePath));
+  const ws = pickDataSheet(wb, fileBase);
+  if (!ws) return null;
+
+  const layout = detectLayout(ws);
+  if (!layout) {
+    console.warn("  skip (unknown layout):", path.basename(filePath));
+    return null;
+  }
+
+  const market = readMarketTitle(ws, layout, fileBase);
+  const years = readYears(ws, layout);
+  const main = readBlockValues(ws, layout.labelCol, years);
+  const values = main.values;
+
+  // Yellow REVISIONS block (when present) overwrites the main publication values.
+  const revLayout = findRevisionsLayout(ws);
+  let revisionMeta = null;
+  if (revLayout) {
+    const rev = readBlockValues(ws, revLayout.labelCol, revLayout.years);
+    const merged = mergeValues(values, rev.values);
+    revisionMeta = {
+      years: revLayout.years.map((y) => y.year),
+      cells: rev.cells,
+      overwrites: merged.overwrites,
+      additions: merged.additions,
+    };
+  }
+
+  promoteParentTotals(values);
+
+  const allYears = new Set([
+    ...years.map((y) => y.year),
+    ...((revisionMeta && revisionMeta.years) || []),
+  ]);
 
   return {
     market,
     source: path.basename(filePath),
     layout: layout.kind,
-    years: years.map((y) => y.year),
+    years: [...allYears].sort((a, b) => a - b),
+    revisionsApplied: !!revisionMeta,
+    revisionMeta,
     values,
   };
 }
@@ -290,7 +364,16 @@ async function main() {
       // Prefer the richer cross-platform layout when both exist
       if (!existing || (extracted.layout === "cross" && existing.layout !== "cross")) {
         byMarket[extracted.market] = extracted;
-        console.log("ok", extracted.layout, extracted.years[0] + "-" + extracted.years.at(-1), Object.keys(extracted.values).length, "series");
+        const revNote = extracted.revisionsApplied
+          ? ` +revisions(${extracted.revisionMeta.cells} cells, ${extracted.revisionMeta.overwrites} overwrites)`
+          : "";
+        console.log(
+          "ok",
+          extracted.layout,
+          extracted.years[0] + "-" + extracted.years.at(-1),
+          Object.keys(extracted.values).length,
+          "series" + revNote
+        );
       } else if (existing && extracted.layout === "compact" && existing.layout === "cross") {
         // Merge any codes/years missing from the preferred file
         let added = 0;
@@ -318,6 +401,7 @@ async function main() {
     sourceFolder: "AllSurveyTemplates",
     note:
       "Historical values extracted from the latest survey templates. " +
+      "Yellow REVISIONS blocks overwrite the main publication values when present. " +
       "Used to pre-fill non-editable (locked) years. Editable years stay blank for contacts. " +
       "Replace with a live database later.",
     markets: byMarket,

@@ -7,6 +7,9 @@
 
   const BLUE = "FF1F4E79";
   const INPUT_GREEN = "FFE2EFDA";
+  const COMMENT_YELLOW = "FFFFFF00";
+  const METHOD_GREY = "FFF2F2F2";
+  const BORDER_BLACK = "FF000000";
   const DATA_START_COL = 3; // A = codes (hidden), B = labels, C.. = years
 
   // [code, label, kind, children]
@@ -122,6 +125,108 @@
     return ws.protect("", {});
   }
 
+  function thinBorder() {
+    const edge = { style: "thin", color: { argb: BORDER_BLACK } };
+    return { top: edge, left: edge, bottom: edge, right: edge };
+  }
+
+  function fillRange(ws, r1, c1, r2, c2, argb) {
+    for (let r = r1; r <= r2; r++) {
+      for (let c = c1; c <= c2; c++) {
+        ws.getRow(r).getCell(c).fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb },
+        };
+      }
+    }
+  }
+
+  function unlockRange(ws, r1, c1, r2, c2) {
+    for (let r = r1; r <= r2; r++) {
+      for (let c = c1; c <= c2; c++) {
+        ws.getRow(r).getCell(c).protection = { locked: false };
+      }
+    }
+  }
+
+  function borderRange(ws, r1, c1, r2, c2) {
+    const b = thinBorder();
+    for (let r = r1; r <= r2; r++) {
+      for (let c = c1; c <= c2; c++) {
+        ws.getRow(r).getCell(c).border = b;
+      }
+    }
+  }
+
+  /**
+   * Comment / methodology panels to the right of the year grid
+   * (matches the yellow Market Comments + grey Methodology layout used in existing templates).
+   */
+  function buildCommentPanels(ws, startCol) {
+    const c0 = startCol;
+    const cTabEnd = startCol + 3;   // tab header spans 4 cols
+    const cBodyEnd = startCol + 7;  // body spans 8 cols
+
+    for (let c = c0; c <= cBodyEnd; c++) ws.getColumn(c).width = 11;
+
+    // --- Market Comments (yellow) ---
+    const mcTab = 5;
+    const mcBodyTop = 6;
+    const mcBodyBot = 11;
+    ws.mergeCells(mcTab, c0, mcTab, cTabEnd);
+    const mcTabCell = ws.getRow(mcTab).getCell(c0);
+    mcTabCell.value = "Market Comments";
+    mcTabCell.font = { bold: true, size: 10 };
+    mcTabCell.alignment = { horizontal: "left", vertical: "middle" };
+    fillRange(ws, mcTab, c0, mcTab, cTabEnd, COMMENT_YELLOW);
+    borderRange(ws, mcTab, c0, mcTab, cTabEnd);
+
+    ws.mergeCells(mcBodyTop, c0, mcBodyBot, cBodyEnd);
+    const mcBody = ws.getRow(mcBodyTop).getCell(c0);
+    mcBody.value = "Please write any comments on the state of your market or major trends shaping it";
+    mcBody.font = { bold: true, size: 11 };
+    mcBody.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    fillRange(ws, mcBodyTop, c0, mcBodyBot, cBodyEnd, COMMENT_YELLOW);
+    borderRange(ws, mcBodyTop, c0, mcBodyBot, cBodyEnd);
+    unlockRange(ws, mcBodyTop, c0, mcBodyBot, cBodyEnd);
+
+    // --- Methodology (grey) ---
+    const methTab = 14;
+    const methBodyTop = 15;
+    const methBodyBot = 20;
+    ws.mergeCells(methTab, c0, methTab, cTabEnd);
+    const methTabCell = ws.getRow(methTab).getCell(c0);
+    methTabCell.value = "Methodology  (please note any changes below)";
+    methTabCell.font = { bold: true, size: 10 };
+    methTabCell.alignment = { horizontal: "left", vertical: "middle" };
+    fillRange(ws, methTab, c0, methTab, cTabEnd, METHOD_GREY);
+    borderRange(ws, methTab, c0, methTab, cTabEnd);
+
+    ws.mergeCells(methBodyTop, c0, methBodyBot, cBodyEnd);
+    const methBody = ws.getRow(methBodyTop).getCell(c0);
+    methBody.value =
+      "Please describe the sources and methodology used for this market " +
+      "(historicals, forecasts, agency commissions, and any media-format definitions that differ from the standard).";
+    methBody.font = { size: 10 };
+    methBody.alignment = { horizontal: "left", vertical: "top", wrapText: true };
+    fillRange(ws, methBodyTop, c0, methBodyBot, cBodyEnd, METHOD_GREY);
+    borderRange(ws, methBodyTop, c0, methBodyBot, cBodyEnd);
+    unlockRange(ws, methBodyTop, c0, methBodyBot, cBodyEnd);
+
+    // --- Methodology revisions (yellow, red prompt) ---
+    const revTop = 22;
+    const revBot = 25;
+    ws.mergeCells(revTop, c0, revBot, cBodyEnd);
+    const revBody = ws.getRow(revTop).getCell(c0);
+    revBody.value = "Please note any methodology revisions here";
+    revBody.font = { bold: true, size: 11, color: { argb: "FFFF0000" } };
+    revBody.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    fillRange(ws, revTop, c0, revBot, cBodyEnd, COMMENT_YELLOW);
+    borderRange(ws, revTop, c0, revBot, cBodyEnd);
+    unlockRange(ws, revTop, c0, revBot, cBodyEnd);
+  }
+
   function lookupValue(historical, code, year) {
     if (!historical || !code) return null;
     const series = historical[code];
@@ -207,6 +312,10 @@
       });
       r += 1;
     }
+
+    // Comment panels sit two columns to the right of the last year column
+    const commentStartCol = DATA_START_COL + years.length + 2;
+    buildCommentPanels(ws, commentStartCol);
 
     ws.getColumn(1).hidden = true;
     ws.getColumn(2).width = 34;

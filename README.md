@@ -12,7 +12,8 @@ Each generated workbook has:
 - a market tab with the standardized cross-platform layout
 - only the selected editable years unlocked (green cells) — all other cells are protected
 - live rollup totals and growth % formulas
-- optional pre-filled values in locked years (from `data/historical-values.json`)
+- optional pre-filled values in locked years (from `data/historical-values.json`, with yellow REVISIONS overwriting older publication values)
+- Market Comments / Methodology panels to the right of the year grid for contact notes
 
 **Survey types:**
 - *Main survey* — defaults: columns 1999–2026, editable 2025–2026
