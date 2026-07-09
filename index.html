@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Market Survey Generator</title>
+<style>
+  :root { --blue: #1f4e79; --green: #e2efda; --border: #d9dde3; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Arial, sans-serif; background: #f4f6f8; color: #222; }
+  header { background: var(--blue); color: #fff; padding: 18px 28px; }
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .85; }
+  main { max-width: 900px; margin: 24px auto; padding: 0 16px; }
+  .card { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 15px; color: var(--blue); }
+  label { font-size: 14px; }
+  .row { display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+  .field { display: flex; align-items: center; gap: 8px; }
+  input[type=number] { width: 84px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; }
+  input[type=text] { padding: 6px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; width: 220px; }
+  .radio-group label { margin-right: 18px; cursor: pointer; }
+  .hint { font-size: 12px; color: #667; margin-top: 8px; }
+  .editable-note { background: var(--green); border-radius: 4px; padding: 2px 6px; }
+  #marketGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 12px; max-height: 260px; overflow-y: auto; margin-top: 10px; border: 1px solid var(--border); border-radius: 4px; padding: 10px; }
+  #marketGrid label { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; }
+  .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 4px; flex-wrap: wrap; }
+  button.small { padding: 5px 12px; font-size: 13px; background: #fff; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; }
+  button.small:hover { background: #eef2f6; }
+  #generateBtn { background: var(--blue); color: #fff; border: none; border-radius: 6px; padding: 12px 28px; font-size: 15px; font-weight: 600; cursor: pointer; }
+  #generateBtn:hover { background: #16395a; }
+  #generateBtn:disabled { background: #9db3c8; cursor: wait; }
+  #status { font-size: 14px; margin-left: 14px; color: #345; }
+  #error { color: #b00020; font-size: 14px; margin-top: 10px; }
+  progress { width: 240px; height: 10px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Market Survey Generator</h1>
+  <p>Generates standardized Global Media Landscape survey templates. Files are built in your browser — nothing is uploaded.</p>
+</header>
+<main>
+  <div class="card">
+    <h2>1 &middot; Survey type</h2>
+    <div class="radio-group">
+      <label><input type="radio" name="stype" value="main" checked> Main survey</label>
+      <label><input type="radio" name="stype" value="supplemental"> Historical restatement (supplemental)</label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2 &middot; Years</h2>
+    <div class="row">
+      <div class="field">
+        <label>Year columns shown:</label>
+        <input type="number" id="yearFrom" value="1999" min="1980" max="2100"> &ndash;
+        <input type="number" id="yearTo" value="2026" min="1980" max="2100">
+      </div>
+      <div class="field">
+        <label><span class="editable-note">Editable years</span>:</label>
+        <input type="number" id="editFrom" value="2025" min="1980" max="2100"> &ndash;
+        <input type="number" id="editTo" value="2026" min="1980" max="2100">
+      </div>
+    </div>
+    <div class="hint">Only the editable years are unlocked (green cells) in the generated templates — everything else is protected.</div>
+  </div>
+
+  <div class="card">
+    <h2>3 &middot; Markets</h2>
+    <div class="toolbar">
+      <button class="small" id="selectAll">Select all</button>
+      <button class="small" id="selectNone">Clear</button>
+      <input type="text" id="marketSearch" placeholder="Search markets...">
+      <span class="hint" id="marketCount"></span>
+    </div>
+    <div id="marketGrid"></div>
+  </div>
+
+  <div class="card">
+    <button id="generateBtn">Generate surveys</button>
+    <span id="status"></span>
+    <div id="error"></div>
+  </div>
+</main>
+
+<script src="vendor/exceljs.min.js"></script>
+<script src="vendor/jszip.min.js"></script>
+<script src="survey-core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
